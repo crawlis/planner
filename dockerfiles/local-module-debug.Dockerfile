@@ -20,7 +20,7 @@
 ##################################################
 FROM ekidd/rust-musl-builder as builder
 
-ARG MODULE_NAME=module_base
+ARG MODULE_NAME=planner
 
 RUN rustup self update
 RUN rustup target add x86_64-unknown-linux-musl
@@ -48,7 +48,7 @@ RUN chmod +x ./target/x86_64-unknown-linux-musl/debug/${MODULE_NAME}
 ##################################################
 FROM scratch
 
-ARG MODULE_NAME=module_base
+ARG MODULE_NAME=planner
 
 # Adding the binary
 COPY --from=builder /home/rust/src/${MODULE_NAME}/target/x86_64-unknown-linux-musl/debug/${MODULE_NAME} ./app

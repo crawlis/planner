@@ -5,7 +5,7 @@ services:
 
 env:
   global:
-    - MODULE_NAME=module_base
+    - MODULE_NAME=planner
 
 jobs:
   fast_finish: true
