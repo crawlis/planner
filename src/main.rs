@@ -35,11 +35,15 @@ fn get_config() -> Result<PlannerConfig, Box<dyn Error>> {
 
     let nats_publisher_subject = String::from("url");
 
+    let starting_url = env::var("STARTING_URL")?;
+    let starting_url = Url::parse(&starting_url)?;
+
     let config = PlannerConfig::new(
         nats_subscriber_uri.into_string(),
         nats_subscriber_subject,
         nats_publisher_uri.into_string(),
         nats_publisher_subject,
+        starting_url.into_string(),
     );
     Ok(config)
 }

@@ -11,6 +11,7 @@ pub struct PlannerConfig {
     nats_subscriber_subject: String,
     nats_publisher_uri: String,
     nats_publisher_subject: String,
+    starting_url: String,
 }
 
 impl PlannerConfig {
@@ -19,18 +20,20 @@ impl PlannerConfig {
         nats_subscriber_subject: String,
         nats_publisher_uri: String,
         nats_publisher_subject: String,
+        starting_url: String,
     ) -> PlannerConfig {
         PlannerConfig {
             nats_subscriber_uri,
             nats_subscriber_subject,
             nats_publisher_uri,
             nats_publisher_subject,
+            starting_url,
         }
     }
 }
 
 pub struct Planner {
-    _config: PlannerConfig,
+    config: PlannerConfig,
     nats_subscriber: NatsSubscriber,
     nats_publisher: NatsPublisher,
 }
@@ -42,13 +45,15 @@ impl Planner {
         let nats_publisher =
             NatsPublisher::new(&config.nats_publisher_uri, &config.nats_publisher_subject)?;
         Ok(Planner {
-            _config: config,
+            config: config,
             nats_subscriber,
             nats_publisher,
         })
     }
 
     pub async fn run(&self) -> Result<(), Box<dyn error::Error>> {
+        self.plan_next_urls(vec![self.config.starting_url.clone()])
+            .await;
         loop {
             if let Some(message) = self.nats_subscriber.get_next_message() {
                 match serde_json::from_slice::<CrawlingResults>(&message.data) {

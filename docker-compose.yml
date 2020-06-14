@@ -35,6 +35,7 @@ services:
       dockerfile: ./dockerfiles/local-module-debug.Dockerfile
     environment:
       - NATS_URI=nats://nats:4222
+      - STARTING_URL=https://lemonde.fr
     depends_on:
       - nats
 
