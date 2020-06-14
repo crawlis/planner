@@ -33,17 +33,13 @@ fn get_config() -> Result<PlannerConfig, Box<dyn Error>> {
     let nats_publisher_uri = env::var("NATS_URI")?;
     let nats_publisher_uri = Url::parse(&nats_publisher_uri)?;
 
-    let nats_publisher_subject = String::from("next_url");
-
-    let database_uri = env::var("DATABASE_URI")?;
-    let database_uri = Url::parse(&database_uri)?;
+    let nats_publisher_subject = String::from("url");
 
     let config = PlannerConfig::new(
         nats_subscriber_uri.into_string(),
         nats_subscriber_subject,
         nats_publisher_uri.into_string(),
         nats_publisher_subject,
-        database_uri.into_string(),
     );
     Ok(config)
 }

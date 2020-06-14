@@ -1,16 +1,16 @@
 use crate::nats::{NatsPublisher, NatsSubscriber};
-use crate::persistence::database;
-use crate::persistence::models;
 use serde::Deserialize;
-use std::error::Error;
-use std::time;
+use std::collections::hash_map::DefaultHasher;
+use std::error;
+use std::hash::{Hash, Hasher};
+use std::io;
+use url::Url;
 
 pub struct PlannerConfig {
     nats_subscriber_uri: String,
     nats_subscriber_subject: String,
     nats_publisher_uri: String,
     nats_publisher_subject: String,
-    database_uri: String,
 }
 
 impl PlannerConfig {
@@ -19,55 +19,58 @@ impl PlannerConfig {
         nats_subscriber_subject: String,
         nats_publisher_uri: String,
         nats_publisher_subject: String,
-        database_uri: String,
     ) -> PlannerConfig {
         PlannerConfig {
             nats_subscriber_uri,
             nats_subscriber_subject,
             nats_publisher_uri,
             nats_publisher_subject,
-            database_uri,
         }
     }
 }
 
 pub struct Planner {
-    config: PlannerConfig,
+    _config: PlannerConfig,
     nats_subscriber: NatsSubscriber,
     nats_publisher: NatsPublisher,
-    database: database::Database,
 }
 
 impl Planner {
-    pub fn new(config: PlannerConfig) -> Result<Planner, std::io::Error> {
+    pub fn new(config: PlannerConfig) -> Result<Planner, io::Error> {
         let nats_subscriber =
             NatsSubscriber::new(&config.nats_subscriber_uri, &config.nats_subscriber_subject)?;
         let nats_publisher =
             NatsPublisher::new(&config.nats_publisher_uri, &config.nats_publisher_subject)?;
-        let database = database::Database::new(&config.database_uri);
         Ok(Planner {
-            config,
+            _config: config,
             nats_subscriber,
             nats_publisher,
-            database,
         })
     }
 
-    pub async fn run(&self) -> Result<(), Box<dyn Error>> {
-        self.database
-            .wait_for_conn(time::Duration::from_secs(2), 10)?;
-        self.database.run_migrations()?;
-
-        loop {}
-
-        Ok(())
+    pub async fn run(&self) -> Result<(), Box<dyn error::Error>> {
+        loop {
+            if let Some(message) = self.nats_subscriber.get_next_message() {
+                match serde_json::from_slice::<CrawlingResults>(&message.data) {
+                    Ok(crawling_results) => self.plan_next_urls(crawling_results.urls).await,
+                    Err(err) => eprintln!("Could not deserialize message: {}", err),
+                }
+            }
+        }
     }
 
-    async fn persist_crawling_results(
-        &self,
-        crawling_results: CrawlingResults,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
+    async fn plan_next_urls(&self, urls: Vec<String>) {
+        urls.iter()
+            .filter_map(|url| Url::parse(url).ok())
+            .map(|url| url.into_string())
+            .for_each(|url| {
+                let key = format!("{}", calculate_hash(&url));
+                if let Ok(message) = serde_json::to_vec(&url) {
+                    if let Err(err) = self.nats_publisher.publish(&key, message) {
+                        eprintln!("Could not publish url: {}", err);
+                    }
+                }
+            });
     }
 }
 
@@ -75,4 +78,10 @@ impl Planner {
 struct CrawlingResults {
     parent: String,
     urls: Vec<String>,
+}
+
+fn calculate_hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
 }

@@ -1,10 +1,5 @@
 version: "3.7"
 services:
-  planner:
-    build:
-      context: .
-      dockerfile: ./dockerfiles/local-module-debug.Dockerfile
-
   crawler:
     build:
       context: .
@@ -18,14 +13,6 @@ services:
       - STARTING_URL=https://lemonde.fr
     depends_on:
       - nats
-
-  nats:
-    image: "nats"
-    expose:
-      - "4222"
-    ports:
-      - "8222:8222"
-    restart: unless-stopped
 
   keeper:
     build:
@@ -41,6 +28,23 @@ services:
     depends_on:
       - nats
       - keeper-db
+
+  planner:
+    build:
+      context: .
+      dockerfile: ./dockerfiles/local-module-debug.Dockerfile
+    environment:
+      - NATS_URI=nats://nats:4222
+    depends_on:
+      - nats
+
+  nats:
+    image: "nats"
+    expose:
+      - "4222"
+    ports:
+      - "8222:8222"
+    restart: unless-stopped
 
   keeper-db:
     image: postgres

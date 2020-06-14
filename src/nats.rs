@@ -29,7 +29,7 @@ impl NatsSubscriber {
     pub fn new(uri: &str, subject: &str) -> Result<NatsSubscriber, std::io::Error> {
         let conn = nats::connect(uri)?;
         let sub = format!("{}.*", subject);
-        let sub = conn.queue_subscribe(&sub, "keeper")?;
+        let sub = conn.queue_subscribe(&sub, "planner")?;
         Ok(NatsSubscriber { conn, sub })
     }
     pub fn get_next_message(&self) -> Option<nats::Message> {
