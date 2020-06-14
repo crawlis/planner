@@ -39,7 +39,7 @@ pub struct Planner {
 }
 
 impl Planner {
-    pub fn new(config: PlannerConfig) -> Result<Planner, io::Error> {
+    pub fn new(config: PlannerConfig) -> io::Result<Planner> {
         let nats_subscriber =
             NatsSubscriber::new(&config.nats_subscriber_uri, &config.nats_subscriber_subject)?;
         let nats_publisher =

@@ -15,7 +15,7 @@ impl NatsPublisher {
         let subject = format!("{}.{}", &self.subject, key);
         self.conn.publish(&subject, message)
     }
-    pub fn close(self) -> Result<(), std::io::Error> {
+    pub fn close(self) {
         self.conn.close()
     }
 }
@@ -35,7 +35,7 @@ impl NatsSubscriber {
     pub fn get_next_message(&self) -> Option<nats::Message> {
         self.sub.try_next()
     }
-    pub fn close(self) -> Result<(), std::io::Error> {
+    pub fn close(self) {
         self.conn.close()
     }
 }
