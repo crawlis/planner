@@ -57,7 +57,7 @@ impl Database {
     ) -> QueryResult<Vec<models::Node>> {
         use schema::nodes::dsl::*;
         nodes
-            .filter(visited.eq(true))
+            .filter(visited.eq(false))
             .limit(number)
             .load::<models::Node>(conn)
     }

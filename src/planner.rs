@@ -1,10 +1,10 @@
 use crate::nats::NatsPublisher;
 use crate::persistence::database;
-use serde::Deserialize;
 use std::collections::hash_map::DefaultHasher;
 use std::error;
 use std::hash::{Hash, Hasher};
 use std::io;
+use std::thread;
 use std::time;
 use url::Url;
 
@@ -60,14 +60,20 @@ impl Planner {
                 .await
             {
                 Ok(nodes) => {
+                    if nodes.len() == 0 {
+                        eprintln!("Could not find non-visited nodes");
+                        self.plan_next_urls(vec![&self.config.starting_url]).await
+                    }
                     self.plan_next_urls(nodes.iter().map(|node| &node.node).collect())
                         .await
                 }
                 Err(err) => {
-                    eprintln!("Could not retrieve non-visited: {}", err);
-                    self.plan_next_urls(vec![&self.config.starting_url]).await;
+                    eprintln!("Could not retrieve non-visited nodes: {}", err);
+                    self.plan_next_urls(vec![&self.config.starting_url]).await
                 }
             }
+            // TODO: adapt this sleep
+            thread::sleep(time::Duration::from_secs(5));
         }
     }
 
@@ -84,12 +90,6 @@ impl Planner {
                 }
             });
     }
-}
-
-#[derive(Deserialize)]
-struct CrawlingResults {
-    parent: String,
-    urls: Vec<String>,
 }
 
 fn calculate_hash<T: Hash>(t: &T) -> u64 {
