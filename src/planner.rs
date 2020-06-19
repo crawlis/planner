@@ -1,10 +1,11 @@
 use crate::nats::NatsPublisher;
-use crate::persistence::{database, models};
+use crate::persistence::database;
 use serde::Deserialize;
 use std::collections::hash_map::DefaultHasher;
 use std::error;
 use std::hash::{Hash, Hasher};
 use std::io;
+use std::time;
 use url::Url;
 
 pub struct PlannerConfig {
@@ -49,6 +50,8 @@ impl Planner {
     }
 
     pub async fn run(&self) -> Result<(), Box<dyn error::Error>> {
+        self.database
+            .wait_for_conn(time::Duration::from_secs(2), 10)?;
         loop {
             let database_conn = self.database.get_conn()?;
             match self
@@ -57,19 +60,18 @@ impl Planner {
                 .await
             {
                 Ok(nodes) => {
-                    self.plan_next_urls(nodes.iter().map(|node| node.node).collect())
+                    self.plan_next_urls(nodes.iter().map(|node| &node.node).collect())
                         .await
                 }
                 Err(err) => {
                     eprintln!("Could not retrieve non-visited: {}", err);
-                    self.plan_next_urls(vec![self.config.starting_url.clone()])
-                        .await;
+                    self.plan_next_urls(vec![&self.config.starting_url]).await;
                 }
             }
         }
     }
 
-    async fn plan_next_urls(&self, urls: Vec<String>) {
+    async fn plan_next_urls(&self, urls: Vec<&String>) {
         urls.iter()
             .filter_map(|url| Url::parse(url).ok())
             .map(|url| url.into_string())
